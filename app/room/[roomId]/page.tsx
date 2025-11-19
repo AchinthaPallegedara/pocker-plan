@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Room, VOTE_OPTIONS } from "@/lib/types";
 import { calculateAverage, getMostVoted } from "@/lib/room-utils";
 import { Copy, Eye, EyeOff, RotateCcw, Users } from "lucide-react";
+import { useSocket } from "@/lib/socket-context";
 
 export default function RoomPage() {
   const params = useParams();
@@ -26,13 +27,15 @@ export default function RoomPage() {
   const router = useRouter();
   const roomId = params.roomId as string;
   const playerId = searchParams.get("playerId");
+  const playerNameFromUrl = searchParams.get("playerName");
+  const { socket, isConnected } = useSocket();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
-  const [joinName, setJoinName] = useState("");
+  const [joinName, setJoinName] = useState(playerNameFromUrl || "");
   const [isJoining, setIsJoining] = useState(false);
 
   const fetchRoom = useCallback(async () => {
@@ -54,15 +57,30 @@ export default function RoomPage() {
     }
   }, [roomId]);
 
+  // Initial room fetch
   useEffect(() => {
     fetchRoom();
+  }, [fetchRoom]);
 
-    if (playerId) {
-      const interval = setInterval(fetchRoom, 2000); // Poll every 2 seconds
-      return () => clearInterval(interval);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerId, roomId]);
+  // Socket.IO real-time updates
+  useEffect(() => {
+    if (!socket || !roomId || !isConnected) return;
+
+    // Join the room
+    socket.emit("join-room", roomId);
+
+    // Listen for room updates
+    const handleRoomUpdate = (updatedRoom: Room) => {
+      setRoom(updatedRoom);
+    };
+
+    socket.on("room-update", handleRoomUpdate);
+
+    return () => {
+      socket.off("room-update", handleRoomUpdate);
+      socket.emit("leave-room", roomId);
+    };
+  }, [socket, roomId, isConnected]);
 
   // Show join dialog after room is loaded
   useEffect(() => {
@@ -71,41 +89,25 @@ export default function RoomPage() {
     }
   }, [playerId, room, loading]);
 
-  const handleVote = async (vote: string) => {
-    if (!playerId) return;
+  const handleVote = (vote: string) => {
+    if (!playerId || !socket) return;
 
-    try {
-      await fetch(`/api/rooms/${roomId}/vote`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerId, vote }),
-      });
-      fetchRoom();
-    } catch (err) {
-      console.error("Failed to vote:", err);
-    }
+    // Emit Socket.IO event directly - no API call
+    socket.emit("player-vote", { roomId, playerId, vote });
   };
 
-  const handleReveal = async () => {
-    try {
-      await fetch(`/api/rooms/${roomId}/reveal`, {
-        method: "POST",
-      });
-      fetchRoom();
-    } catch (err) {
-      console.error("Failed to reveal:", err);
-    }
+  const handleReveal = () => {
+    if (!socket) return;
+
+    // Emit Socket.IO event directly - no API call
+    socket.emit("reveal-votes", roomId);
   };
 
-  const handleReset = async () => {
-    try {
-      await fetch(`/api/rooms/${roomId}/reset`, {
-        method: "POST",
-      });
-      fetchRoom();
-    } catch (err) {
-      console.error("Failed to reset:", err);
-    }
+  const handleReset = () => {
+    if (!socket) return;
+
+    // Emit Socket.IO event directly - no API call
+    socket.emit("reset-votes", roomId);
   };
 
   const copyRoomLink = () => {
@@ -115,8 +117,17 @@ export default function RoomPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleLeaveRoom = () => {
+    if (playerId && socket) {
+      // Remove player from room via Socket.IO
+      socket.emit("remove-player", { roomId, playerId });
+    }
+    // Navigate to home
+    router.push("/");
+  };
+
   const handleJoinRoom = async (asSpectator: boolean) => {
-    if (!joinName.trim()) return;
+    if (!joinName.trim() || !socket) return;
 
     setIsJoining(true);
     try {
@@ -132,6 +143,17 @@ export default function RoomPage() {
 
       const data = await response.json();
       if (data.playerId) {
+        // Add player via Socket.IO for real-time updates
+        socket.emit("add-player", {
+          roomId,
+          player: {
+            id: data.playerId,
+            name: data.playerName,
+            vote: null,
+            isSpectator: data.isSpectator,
+          },
+        });
+
         // Update URL with playerId
         router.push(`/room/${roomId}?playerId=${data.playerId}`);
         setShowJoinDialog(false);
@@ -266,11 +288,7 @@ export default function RoomPage() {
                 <Copy className="w-4 h-4 mr-2" />
                 {copied ? "Copied!" : "Copy Link"}
               </Button>
-              <Button
-                onClick={() => router.push("/")}
-                variant="outline"
-                size="sm"
-              >
+              <Button onClick={handleLeaveRoom} variant="outline" size="sm">
                 Leave Room
               </Button>
             </div>

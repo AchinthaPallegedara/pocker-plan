@@ -50,23 +50,11 @@ export default function Home() {
 
     setIsJoining(true);
     try {
-      const response = await fetch("/api/rooms/join", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomId: joinRoomId.toUpperCase(),
-          playerName: joinPlayerName,
-        }),
+      // Navigate to room with player name in query params
+      const params = new URLSearchParams({
+        playerName: joinPlayerName,
       });
-
-      const data = await response.json();
-      if (data.playerId) {
-        router.push(
-          `/room/${joinRoomId.toUpperCase()}?playerId=${data.playerId}`
-        );
-      } else if (data.error) {
-        alert(data.error);
-      }
+      router.push(`/room/${joinRoomId.toUpperCase()}?${params.toString()}`);
     } catch (error) {
       console.error("Failed to join room:", error);
       alert("Failed to join room. Please check the room ID and try again.");

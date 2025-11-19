@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { roomStore } from "@/lib/room-store";
 import { generatePlayerId } from "@/lib/room-utils";
+import "@/lib/socket-types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const room = await roomStore.getRoom(roomId);
+    const room = global.rooms?.get(roomId);
 
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
@@ -21,16 +21,8 @@ export async function POST(request: NextRequest) {
 
     const playerId = generatePlayerId();
 
-    room.players.push({
-      id: playerId,
-      name: playerName,
-      vote: null,
-      isSpectator: isSpectator,
-    });
-
-    await roomStore.updateRoom(roomId, room);
-
-    return NextResponse.json({ playerId });
+    // Return playerId immediately - player will be added via Socket.IO
+    return NextResponse.json({ playerId, playerName, isSpectator });
   } catch (error) {
     console.error("Error joining room:", error);
     return NextResponse.json({ error: "Failed to join room" }, { status: 500 });
