@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       createdAt: Date.now(),
     };
 
-    roomStore.createRoom(room);
+    await roomStore.createRoom(room);
 
     return NextResponse.json({ roomId, playerId });
   } catch (error) {

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const room = roomStore.getRoom(roomId);
+    const room = await roomStore.getRoom(roomId);
 
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       isSpectator: isSpectator,
     });
 
-    roomStore.updateRoom(roomId, room);
+    await roomStore.updateRoom(roomId, room);
 
     return NextResponse.json({ playerId });
   } catch (error) {

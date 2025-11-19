@@ -7,7 +7,7 @@ export async function POST(
 ) {
   try {
     const { roomId } = await params;
-    const room = roomStore.getRoom(roomId);
+    const room = await roomStore.getRoom(roomId);
 
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
@@ -19,7 +19,7 @@ export async function POST(
     });
     room.revealed = false;
 
-    roomStore.updateRoom(roomId, room);
+    await roomStore.updateRoom(roomId, room);
 
     return NextResponse.json({ success: true });
   } catch (error) {

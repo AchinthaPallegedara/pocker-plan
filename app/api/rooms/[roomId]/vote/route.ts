@@ -9,7 +9,7 @@ export async function POST(
     const { roomId } = await params;
     const { playerId, vote } = await request.json();
 
-    const room = roomStore.getRoom(roomId);
+    const room = await roomStore.getRoom(roomId);
 
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
@@ -22,7 +22,7 @@ export async function POST(
     }
 
     player.vote = vote;
-    roomStore.updateRoom(roomId, room);
+    await roomStore.updateRoom(roomId, room);
 
     return NextResponse.json({ success: true });
   } catch (error) {
