@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       revealed: false,
-      createdAt: new Date(),
+      createdAt: Date.now(),
     };
 
     global.rooms?.set(roomId, room);
