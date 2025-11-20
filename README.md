@@ -1,49 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Poker Planning App
+
+A real-time poker planning application built with Next.js, Socket.IO, and Upstash Redis.
+
+## Features
+
+- Real-time voting with Socket.IO
+- Persistent storage with Upstash Redis
+- Create and join planning rooms
+- Fibonacci sequence voting options
+- Spectator mode
+- Auto-expiring rooms (24 hours)
+
+## Tech Stack
+
+- **Next.js 16** - React framework
+- **Socket.IO** - Real-time bidirectional communication
+- **Upstash Redis** - Serverless Redis for data persistence
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **shadcn/ui** - UI components
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+ or Bun
+- Upstash Redis account (free tier available)
+
+### Local Development
+
+1. Clone the repository
+2. Install dependencies:
+
+   ```bash
+   bun install
+   # or
+   npm install
+   ```
+
+3. Create a `.env.local` file:
+
+   ```env
+   NEXT_PUBLIC_SOCKET_URL=http://localhost:3000
+   UPSTASH_REDIS_REST_URL=your_redis_url
+   UPSTASH_REDIS_REST_TOKEN=your_redis_token
+   ```
+
+4. Run the development server:
+
+   ```bash
+   bun run dev
+   # or
+   npm run dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000)
+
+## Deployment
+
+**⚠️ Important:** Vercel's serverless architecture doesn't support persistent WebSocket connections required by Socket.IO.
+
+### Recommended Approach
+
+Deploy the Socket.IO server separately and the Next.js frontend on Vercel:
+
+1. **Deploy Socket.IO server to Railway/Render:**
+   - See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions
+2. **Deploy frontend to Vercel:**
+   - Add environment variables in Vercel dashboard
+   - Point `NEXT_PUBLIC_SOCKET_URL` to your Socket.IO server URL
+
+For complete deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+## Project Structure
+
+```
+├── app/                    # Next.js app router pages
+│   ├── api/               # API routes
+│   └── room/              # Room pages
+├── components/            # React components
+│   └── ui/               # shadcn/ui components
+├── lib/
+│   ├── room-store.ts     # Upstash Redis storage layer
+│   ├── socket-context.tsx # Socket.IO React context
+│   └── types.ts          # TypeScript types
+├── server.ts             # Custom Socket.IO server
+└── DEPLOYMENT.md         # Detailed deployment guide
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable                   | Description            | Required |
+| -------------------------- | ---------------------- | -------- |
+| `NEXT_PUBLIC_SOCKET_URL`   | Socket.IO server URL   | Yes      |
+| `UPSTASH_REDIS_REST_URL`   | Upstash Redis REST URL | Yes      |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis token    | Yes      |
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Socket.IO Documentation](https://socket.io/docs/)
+- [Upstash Redis Documentation](https://docs.upstash.com/redis)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-### Required Environment Variables
-
-Before deploying to Vercel, you must set up Upstash Redis for persistent room storage:
-
-1. Create a free account at [Upstash](https://console.upstash.com/)
-2. Create a new Redis database
-3. Copy the REST URL and REST Token
-4. In your Vercel project settings, add these environment variables:
-   - `UPSTASH_REDIS_REST_URL`
-   - `UPSTASH_REDIS_REST_TOKEN`
-
-Without these variables, rooms will return 404 errors on Vercel's serverless platform.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT

@@ -2,6 +2,12 @@ import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
 import { Server as SocketIOServer } from "socket.io";
+import { config } from "dotenv";
+
+// Load environment variables FIRST before any other imports
+config({ path: ".env.local" });
+
+// Now import modules that depend on env vars
 import { Room, Player } from "./lib/types";
 import { roomStore } from "./lib/room-store";
 
@@ -44,7 +50,12 @@ app.prepare().then(() => {
       // Send current room state
       const room = await roomStore.getRoom(roomId);
       if (room) {
+        console.log(`✅ Sending room ${roomId} state to socket ${socket.id}`);
         socket.emit("room-update", room);
+      } else {
+        console.log(
+          `⚠️  Room ${roomId} not found when socket ${socket.id} tried to join`
+        );
       }
     });
 
@@ -73,14 +84,24 @@ app.prepare().then(() => {
         playerId: string;
         vote: string;
       }) => {
+        console.log(
+          `📊 Vote received: Player ${playerId} voted ${vote} in room ${roomId}`
+        );
         const room = await roomStore.getRoom(roomId);
         if (room) {
           const player = room.players.find((p) => p.id === playerId);
           if (player) {
             player.vote = vote;
             await roomStore.updateRoom(roomId, room);
+            console.log(
+              `✅ Vote saved and broadcasting update to room ${roomId}`
+            );
             io.to(roomId).emit("room-update", room);
+          } else {
+            console.log(`❌ Player ${playerId} not found in room ${roomId}`);
           }
+        } else {
+          console.log(`❌ Room ${roomId} not found`);
         }
       }
     );

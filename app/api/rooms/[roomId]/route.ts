@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { roomStore } from "@/lib/room-store";
+import "@/lib/socket-types";
 
 export async function GET(
   request: NextRequest,

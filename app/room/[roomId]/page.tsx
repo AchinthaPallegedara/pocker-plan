@@ -90,8 +90,24 @@ export default function RoomPage() {
   }, [playerId, room, loading]);
 
   const handleVote = (vote: string) => {
-    if (!playerId || !socket) return;
+    if (!playerId) {
+      console.error("Cannot vote: No playerId");
+      return;
+    }
 
+    if (!socket) {
+      console.error("Cannot vote: Socket is null");
+      alert("Connection error. Please refresh the page.");
+      return;
+    }
+
+    if (!isConnected) {
+      console.error("Cannot vote: Socket not connected");
+      alert("Not connected to server. Please wait and try again.");
+      return;
+    }
+
+    console.log("Emitting vote:", { roomId, playerId, vote });
     // Emit Socket.IO event directly - no API call
     socket.emit("player-vote", { roomId, playerId, vote });
   };
@@ -281,6 +297,14 @@ export default function RoomPage() {
               <p className="text-gray-600 dark:text-gray-300 mt-1">
                 Room ID:{" "}
                 <span className="font-mono font-semibold">{roomId}</span>
+                {" • "}
+                <span
+                  className={`text-sm ${
+                    isConnected ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
+                </span>
               </p>
             </div>
             <div className="flex gap-2">

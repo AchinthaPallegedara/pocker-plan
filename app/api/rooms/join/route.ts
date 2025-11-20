@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generatePlayerId } from "@/lib/room-utils";
 import { roomStore } from "@/lib/room-store";
+import "@/lib/socket-types";
 
 export async function POST(request: NextRequest) {
   try {
