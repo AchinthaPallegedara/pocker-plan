@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import "@/lib/socket-types";
+import { roomStore } from "@/lib/room-store";
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { roomId } = await params;
-    const room = global.rooms?.get(roomId);
+    const room = await roomStore.getRoom(roomId);
 
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });

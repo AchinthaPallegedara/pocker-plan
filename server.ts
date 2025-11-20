@@ -3,6 +3,7 @@ import { parse } from "url";
 import next from "next";
 import { Server as SocketIOServer } from "socket.io";
 import { Room, Player } from "./lib/types";
+import { roomStore } from "./lib/room-store";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -10,9 +11,6 @@ const port = parseInt(process.env.PORT || "3000", 10);
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
-
-// In-memory room storage for real-time performance
-const rooms = new Map<string, Room>();
 
 app.prepare().then(() => {
   const httpServer = createServer(async (req, res) => {
@@ -39,12 +37,12 @@ app.prepare().then(() => {
     console.log("Client connected:", socket.id);
 
     // Join a room
-    socket.on("join-room", (roomId: string, playerId?: string) => {
+    socket.on("join-room", async (roomId: string, playerId?: string) => {
       socket.join(roomId);
       console.log(`Socket ${socket.id} joined room ${roomId}`);
 
       // Send current room state
-      const room = rooms.get(roomId);
+      const room = await roomStore.getRoom(roomId);
       if (room) {
         socket.emit("room-update", room);
       }
@@ -53,10 +51,11 @@ app.prepare().then(() => {
     // Add player to room
     socket.on(
       "add-player",
-      ({ roomId, player }: { roomId: string; player: Player }) => {
-        const room = rooms.get(roomId);
+      async ({ roomId, player }: { roomId: string; player: Player }) => {
+        const room = await roomStore.getRoom(roomId);
         if (room) {
           room.players.push(player);
+          await roomStore.updateRoom(roomId, room);
           io.to(roomId).emit("room-update", room);
         }
       }
@@ -65,7 +64,7 @@ app.prepare().then(() => {
     // Player vote
     socket.on(
       "player-vote",
-      ({
+      async ({
         roomId,
         playerId,
         vote,
@@ -74,11 +73,12 @@ app.prepare().then(() => {
         playerId: string;
         vote: string;
       }) => {
-        const room = rooms.get(roomId);
+        const room = await roomStore.getRoom(roomId);
         if (room) {
           const player = room.players.find((p) => p.id === playerId);
           if (player) {
             player.vote = vote;
+            await roomStore.updateRoom(roomId, room);
             io.to(roomId).emit("room-update", room);
           }
         }
@@ -86,22 +86,24 @@ app.prepare().then(() => {
     );
 
     // Reveal votes
-    socket.on("reveal-votes", (roomId: string) => {
-      const room = rooms.get(roomId);
+    socket.on("reveal-votes", async (roomId: string) => {
+      const room = await roomStore.getRoom(roomId);
       if (room) {
         room.revealed = true;
+        await roomStore.updateRoom(roomId, room);
         io.to(roomId).emit("room-update", room);
       }
     });
 
     // Reset votes
-    socket.on("reset-votes", (roomId: string) => {
-      const room = rooms.get(roomId);
+    socket.on("reset-votes", async (roomId: string) => {
+      const room = await roomStore.getRoom(roomId);
       if (room) {
         room.players.forEach((player) => {
           player.vote = null;
         });
         room.revealed = false;
+        await roomStore.updateRoom(roomId, room);
         io.to(roomId).emit("room-update", room);
       }
     });
@@ -109,10 +111,11 @@ app.prepare().then(() => {
     // Remove player from room
     socket.on(
       "remove-player",
-      ({ roomId, playerId }: { roomId: string; playerId: string }) => {
-        const room = rooms.get(roomId);
+      async ({ roomId, playerId }: { roomId: string; playerId: string }) => {
+        const room = await roomStore.getRoom(roomId);
         if (room) {
           room.players = room.players.filter((p) => p.id !== playerId);
+          await roomStore.updateRoom(roomId, room);
           io.to(roomId).emit("room-update", room);
           console.log(`Player ${playerId} removed from room ${roomId}`);
         }
@@ -131,9 +134,8 @@ app.prepare().then(() => {
     });
   });
 
-  // Make io instance and rooms available globally for API routes
+  // Make io instance available globally for API routes
   global.io = io;
-  global.rooms = rooms;
 
   httpServer
     .once("error", (err) => {

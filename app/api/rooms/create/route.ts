@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateRoomId, generatePlayerId } from "@/lib/room-utils";
-import "@/lib/socket-types";
+import { roomStore } from "@/lib/room-store";
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       createdAt: Date.now(),
     };
 
-    global.rooms?.set(roomId, room);
+    await roomStore.createRoom(room);
 
     return NextResponse.json({ roomId, playerId });
   } catch (error) {
